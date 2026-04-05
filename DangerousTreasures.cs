@@ -17,7 +17,7 @@ using UnityEngine.SceneManagement;
 
 namespace Oxide.Plugins
 {
-    [Info("Dangerous Treasures", "nivex", "2.5.0")]
+    [Info("Dangerous Treasures", "nivex", "2.6.0")]
     [Description("Event with treasure chests.")]
     internal class DangerousTreasures : RustPlugin
     {
@@ -776,7 +776,7 @@ namespace Oxide.Plugins
                 this.positions = positions;
 
                 InvokeRepeating(TryToRoam, 0f, 7.5f);
-                InvokeRepeating(TryToAttack, 1f, 1f);
+                InvokeRepeating(TryToAttack, 1f, 1.25f);
             }
 
             private void TryToRoam()
@@ -1092,7 +1092,7 @@ namespace Oxide.Plugins
                     }
 
                     projectile.speed = config.Rocket.Speed * 2f;
-                    InvokeRepeating(GuideMissile, 0.1f, 0.1f);
+                    InvokeRepeating(GuideMissile, 0.2f, 0.2f);
                 });
             }
 
@@ -1237,12 +1237,18 @@ namespace Oxide.Plugins
                 {
                     Instance = instance;
                     this.chest = chest;
-                    InvokeRepeating(Track, 1f, 0.1f);
+                    InvokeRepeating(Track, 1f, 0.25f);
                 }
 
                 private void Track()
                 {
                     if (chest == null || chest.started || player.IsKilled() || !player.IsConnected || !chest.players.Contains(player.userID))
+                    {
+                        Destroy(this);
+                        return;
+                    }
+
+                    if (!config.NewmanMode.Aura && !config.NewmanMode.Harm && !config.Fireballs.Enabled)
                     {
                         Destroy(this);
                         return;
@@ -1416,7 +1422,7 @@ namespace Oxide.Plugins
                     }
                 }
 
-                InvokeRepeating(UpdateMarker, 5f, 30f);
+                InvokeRepeating(UpdateMarker, 5f, 45f);
                 Interface.CallHook("OnDangerousEventStarted", containerPos);
             }
 
@@ -1671,9 +1677,11 @@ namespace Oxide.Plugins
                     Message(player, config.Fireballs.Enabled ? "Dangerous Zone Protected" : "Dangerous Zone Unprotected");
                 }
 
-                var tracker = player.gameObject.GetComponent<NewmanTracker>() ?? player.gameObject.AddComponent<NewmanTracker>();
-
-                tracker.Assign(Instance, this);
+                if (config.NewmanMode.Aura || config.NewmanMode.Harm || config.Fireballs.Enabled)
+                {
+                    var tracker = player.gameObject.GetComponent<NewmanTracker>() ?? player.gameObject.AddComponent<NewmanTracker>();
+                    tracker.Assign(Instance, this);
+                }
 
                 players.Add(player.userID);
             }
@@ -5423,13 +5431,13 @@ namespace Oxide.Plugins
             public float AutoDrawDistance { get; set; } = 300f;
 
             [JsonProperty(PropertyName = "Grant DDRAW temporarily to players")]
-            public bool GrantDraw { get; set; } = true;
+            public bool GrantDraw { get; set; } = false;
 
             [JsonProperty(PropertyName = "Grant Draw Time")]
-            public float DrawTime { get; set; } = 15f;
+            public float DrawTime { get; set; } = 10f;
 
             [JsonProperty(PropertyName = "Time To Loot")]
-            public float DestructTime { get; set; } = 900f;
+            public float DestructTime { get; set; } = 720f;
 
             [JsonProperty(PropertyName = "Despawn Timer Resets When Npc Is Attacked By Players")]
             public bool DestructTimeResetsWhenAttacked { get; set; }
@@ -5501,8 +5509,7 @@ namespace Oxide.Plugins
         public class FireballSettings
         {
             [JsonProperty(PropertyName = "Enabled")]
-            public bool Enabled { get; set; } = true;
-
+            public bool Enabled { get; set; } = false;
             [JsonProperty(PropertyName = "Damage Per Second")]
             public float DamagePerSecond { get; set; } = 10f;
 
@@ -5516,16 +5523,16 @@ namespace Oxide.Plugins
             public float Radius { get; set; } = 1f;
 
             [JsonProperty(PropertyName = "Tick Rate")]
-            public float TickRate { get; set; } = 1f;
+            public float TickRate { get; set; } = 1.5f;
 
             [JsonProperty(PropertyName = "Generation")]
-            public float Generation { get; set; } = 5f;
+            public float Generation { get; set; } = 3f;
 
             [JsonProperty(PropertyName = "Water To Extinguish")]
             public int WaterToExtinguish { get; set; } = 25;
 
             [JsonProperty(PropertyName = "Spawn Every X Seconds")]
-            public int SecondsBeforeTick { get; set; } = 5;
+            public int SecondsBeforeTick { get; set; } = 8;
         }
 
         public class GUIAnnouncementSettings
@@ -5821,7 +5828,7 @@ namespace Oxide.Plugins
             public NpcSettingsAccuracy Accuracy { get; set; } = new(100);
 
             [JsonProperty(PropertyName = "Aggression Range")]
-            public float AggressionRange { get; set; } = 70f;
+            public float AggressionRange { get; set; } = 40f;
 
             [JsonProperty(PropertyName = "Despawn Inventory On Death")]
             public bool DespawnInventory { get; set; } = true;
@@ -5830,19 +5837,19 @@ namespace Oxide.Plugins
             public float DespawnInventoryTime { get; set; } = 30f;
 
             [JsonProperty(PropertyName = "Corpse Despawn Time Otherwise")]
-            public float CorpseDespawnTime { get; set; } = 300f;
+            public float CorpseDespawnTime { get; set; } = 180f;
 
             [JsonProperty(PropertyName = "Die Instantly From Headshots")]
             public bool Headshot { get; set; }
 
             [JsonProperty(PropertyName = "Amount To Spawn (min)")]
-            public int SpawnMinAmount { get; set; } = 2;
+            public int SpawnMinAmount { get; set; } = 1;
 
             [JsonProperty(PropertyName = "Amount To Spawn (max)")]
-            public int SpawnAmount { get; set; } = 2;
+            public int SpawnAmount { get; set; } = 1;
 
             [JsonProperty(PropertyName = "Health")]
-            public float Health { get; set; } = 150f;
+            public float Health { get; set; } = 175f;
         }
 
         public class NpcSettingsScientist
@@ -5867,7 +5874,7 @@ namespace Oxide.Plugins
             public NpcSettingsAccuracy Accuracy { get; set; } = new(20);
 
             [JsonProperty(PropertyName = "Aggression Range")]
-            public float AggressionRange { get; set; } = 70f;
+            public float AggressionRange { get; set; } = 40f;
 
             [JsonProperty(PropertyName = "Despawn Inventory On Death")]
             public bool DespawnInventory { get; set; } = true;
@@ -5876,19 +5883,19 @@ namespace Oxide.Plugins
             public float DespawnInventoryTime { get; set; } = 30f;
 
             [JsonProperty(PropertyName = "Corpse Despawn Time Otherwise")]
-            public float CorpseDespawnTime { get; set; } = 300f;
+            public float CorpseDespawnTime { get; set; } = 180f;
 
             [JsonProperty(PropertyName = "Die Instantly From Headshots")]
             public bool Headshot { get; set; }
 
             [JsonProperty(PropertyName = "Amount To Spawn (min)")]
-            public int SpawnMinAmount { get; set; } = 2;
+            public int SpawnMinAmount { get; set; } = 1;
 
             [JsonProperty(PropertyName = "Amount To Spawn (max)")]
             public int SpawnAmount { get; set; } = 2;
 
             [JsonProperty(PropertyName = "Health (100 min, 5000 max)")]
-            public float Health { get; set; } = 150f;
+            public float Health { get; set; } = 175f;
         }
 
         public class NpcSettings
@@ -5987,7 +5994,7 @@ namespace Oxide.Plugins
             public bool Enabled { get; set; } = true;
 
             [JsonProperty(PropertyName = "Rockets")]
-            public int Amount { get; set; } = 8;
+            public int Amount { get; set; } = 2;
 
             [JsonProperty(PropertyName = "Speed")]
             public float Speed { get; set; } = 5f;
@@ -6002,16 +6009,16 @@ namespace Oxide.Plugins
             public List<ulong> Custom { get; set; } = new();
 
             [JsonProperty(PropertyName = "Use Random Skin")]
-            public bool RandomSkins { get; set; } = true;
+            public bool RandomSkins { get; set; } = false;
 
             [JsonProperty(PropertyName = "Preset Skin")]
             public ulong PresetSkin { get; set; } = 0;
 
             [JsonProperty(PropertyName = "Include Workshop Skins")]
-            public bool RandomWorkshopSkins { get; set; } = true;
+            public bool RandomWorkshopSkins { get; set; } = false;
 
             [JsonProperty(PropertyName = "Randomize Npc Item Skins")]
-            public bool Npcs { get; set; } = true;
+            public bool Npcs { get; set; } = false;
 
             [JsonProperty(PropertyName = "Use Identical Skins For All Npcs")]
             public bool UniqueNpcs { get; set; } = true;
